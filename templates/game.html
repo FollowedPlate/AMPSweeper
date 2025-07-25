@@ -1,0 +1,78 @@
+<html>
+<head>
+    <title>Linkedin Queens: {{ info.username }}</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<h1>Linkedin Queens: {{ info.username }}</h1>
+
+<h2 id="puzzle_title">Puzzle {{ info.board_seed }}</h2>
+
+    {{ info.board_str | safe }}
+    <!-- Board HTML string is dynamically created and inserted by server -->
+
+
+
+<h2 id="feedback"></h2>
+
+{% include 'partials/footer.html' %}
+
+
+<script>
+    cells = document.getElementsByTagName("td");
+    for (let cell of cells) {
+        cell.addEventListener('mouseup', click_stuff)
+        cell.addEventListener('contextmenu', cancel_context)
+    }
+
+    async function cancel_context(event) {
+        event.preventDefault();
+    }
+
+    async function click_stuff(event) {
+        console.log(event.target.id, " was clicked")
+        let symbols = {{info.symbols  | safe}} // The server can even dynamically write Javascript
+        let current = event.target.innerText;
+        let size = {{ info.board_size }}
+
+        let data = {}
+
+        if (event.button === 0) {
+            data[event.target.id] = "clicked";
+        } else if (event.button === 2) {
+            event.target.innerText = symbols[current]
+        }
+
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        };                         // URL is dynamically written by the server based on which game is being played
+        console.log(options)
+        let response = await fetch("http://127.0.0.1:5000/click", options)
+        if (response.ok) { // Check if the response status is in the 200-299 range
+            const response_data = await response.json();
+            console.log("Response from server:", response_data);
+            console.log(typeof response_data);
+            {#document.getElementById("feedback").innerText = response_data.result#}
+
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    let key = `${i}_${j}`
+                    if (key in response_data) {
+                        let cdata = response_data[key]
+                        document.getElementById(key).innerText = cdata[0];
+                        document.getElementById(key).classList.replace(document.getElementById(key).classList.item(0), cdata[1])
+                    }
+                }
+            }
+        } else {
+            console.error('Server error:', response.status);
+        }
+    }
+
+</script>
+</body>
+</html>
