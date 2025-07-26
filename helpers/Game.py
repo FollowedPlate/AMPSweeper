@@ -1,6 +1,5 @@
 import random
 
-from helpers import Queens
 
 
 class Game:
@@ -11,6 +10,7 @@ class Game:
         self.symbols = {
             ' ': '🚩',
             '🚩': ' ',
+            'x':'x',
             '0': '0',
             '1': '1',
             '2': '2',
@@ -61,7 +61,11 @@ class Game:
                 chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
                            (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
                 self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
-
+        self.safest_tiles = list()
+        for row in range(self.n):
+            for col in range(self.n):
+                if self.__board[row][col] == 0:
+                    self.safest_tiles.append((row, col))
         print(self.__board)
 
     @property
@@ -165,11 +169,16 @@ class Game:
         '''HTML-formatted board'''
         symbols_list = list(self.symbols.keys())
         board_str = "<table class='centerTable'>"
-        for i in range(self.n):
+        sr, sc = self.random.choice(self.safest_tiles)
+        for r in range(self.n):
             board_str += "<tr>"
             for c in range(self.n):
                 # board_str += f"<td id='{i}_{c}' class='{self.select_color(i, c)}' width='50' height='50'>{symbols_list[self.__board[i][c]]}</td>"
-                board_str += f"<td id='{i}_{c}' class='{self.select_color(i, c)}' width='50' height='50'>{symbols_list[0]}</td>"
+                if r==sr and c==sc:
+                    board_str += f"<td id='{r}_{c}' class='{self.select_color(r, c)}' width='50' height='50'>x</td>"
+                else:
+                    board_str += f"<td id='{r}_{c}' class='{self.select_color(r, c)}' width='50' height='50'>{symbols_list[0]}</td>"
+
             board_str += "</tr>"
         board_str += "</table>"
         return board_str
