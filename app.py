@@ -36,10 +36,13 @@ def game():
     username = request.args.get('username')
     size = int(request.args.get('board_size')) #all data arrives as a str
     board_seed = request.args.get('board_seed')
+    difficulty = request.args.get('difficulty')
+
     if not board_seed:
         board_seed = str(random.randint(1,10000))
     global my_game
-    my_game= Game.Game(size, board_seed)
+
+    my_game= Game.Game(size, board_seed, difficulty)
 
     template_info={#useful to group template info into one dictionary
         "username": username,

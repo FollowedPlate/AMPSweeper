@@ -100,7 +100,7 @@
 
             let response2 = await fetch("http://127.0.0.1:5000/submit", options2)
             if (response2.ok) { // Check if the response status is in the 200-299 range
-                const response_data2 = await response2.json();2
+                const response_data2 = await response2.json();
                 console.log("Response from server:", response_data2);
                 document.getElementById("feedback").innerText = response_data2.result
             } else {

@@ -7,7 +7,7 @@
     <h1>Welcome to {{ title }}!</h1>
 
     <form action="/game">
-        <label for="username">username:</label>
+        <label for="username">Username:</label>
         <input type="text" id="username" name="username"><br><br>
         {#    <label for="board_size">Board size:</label>#}
         {#    <input type="text" id="board_size" name="board_size"><br><br>#}
@@ -20,8 +20,15 @@
             <option value="9">9</option>
             <option value="10">10</option>
         </select><br><br>
-        <label for="board_seed">board_seed:</label>
+        <label for="board_seed">Board_seed:</label>
         <input type="text" id="board_seed" name="board_seed"><br><br>
+
+	<label for="difficulty">Difficulty:</label>
+	<select name="difficulty" id="difficulty">
+				<option value="easy">Easy</option>
+				<option value="medium">Medium</option>
+				<option value="hard">Hard</option>
+	</select>
 
         <input type="submit" value="Submit">
     </form>

@@ -1,8 +1,13 @@
 import random
 
+BOMB_NUM_SCALE_EASY = 25
+BOMB_NUM_SCALE_MEDIUM = 15
+BOMB_NUM_SCALE_HARD = 5
+
+BOMB_VAL = -1
 
 class Game:
-    def __init__(self, n: int = 8, seed = random.random()):
+    def __init__(self, n: int = 8, seed: str = "", difficulty: str = "easy"):
         self.n = n
         self.title = "AMPSweeper"
         self.symbols = {
@@ -29,16 +34,31 @@ class Game:
 
         # random seed if none is given
         if seed == "":
-            seed = random.random()
-        self.random.seed(seed)
+            seed = str(random.random())
+        self.random.seed(float(seed))
 
         self.__board = [[0] * self.n for _ in range(self.n)]
         self.color_map = self.generate_color_map(list())
 
+        self.create_board(difficulty)
+
+        print(self.__board)
+
+    @property
+    def board(self):
+        return self.__board
+
+    def create_board(self, difficulty: str):
+        bomb_scale = BOMB_NUM_SCALE_EASY
+        if difficulty == "medium":
+            bomb_scale = BOMB_NUM_SCALE_MEDIUM
+        elif difficulty == "hard":
+            bomb_scale = BOMB_NUM_SCALE_HARD
+
         bombs = set()
         tiles_to_change = list()
 
-        for _ in range(self.n ** 2 // BOMB_NUM_SCALE):
+        for _ in range(self.n ** 2 // bomb_scale):
             # Select the tile to be bombed
             rbomb = self.random.randint(0, self.n - 1)
             cbomb = self.random.randint(0, self.n - 1)
@@ -52,7 +72,7 @@ class Game:
                     tiles_to_change.append(tup)
 
         for tup in tiles_to_change:
-            if self.__board[tup[0]][tup[1]] == BOMB_VAL:
+            if self.__board[tup[0]][tup[1]] == 0:
                 chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
                            (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
                 self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
@@ -61,17 +81,8 @@ class Game:
             for col in range(self.n):
                 if self.__board[row][col] == 0:
                     self.safest_tiles.append((row, col))
-        print(self.__board)
-
-    @property
-    def board(self):
-        return self.__board
-
-    def create_board(self, size: int, seed) -> list[list[int]]:
-        pass
 
     def process_click(self, data: dict[str, str]) -> dict[str, ...]:
-
         ret = {}
         # ret["0_0"] = ("9", "test1")
         # ret["3_3"] = ("2", "test1")
