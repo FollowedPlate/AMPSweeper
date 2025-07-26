@@ -1,12 +1,11 @@
 import random
 
-from helpers import Queens
-
+BOMB_NUM_SCALE = 15
+BOMB_VAL = -1
 
 class Game:
-    def __init__(self, n: int, seed):
-        self.n = 8
-        self.__board = [[0] * self.n for _ in range(self.n)]
+    def __init__(self, n: int = 8, seed = random.random()):
+        self.n = n
         self.title = "AMPSweeper"
         self.symbols = {
             ' ': '🚩',
@@ -23,41 +22,40 @@ class Game:
             '9': '9',
             '💥': '💥',
             ' ': ' '
-            # 'Ｏ':'Ｘ',
-            # 'Ｘ':'♛',
-            # '♛':'Ｏ'
-            # '_':'X',
-            # 'X':'Q',
-            # 'Q':'_'
-            # '🧺': '🦗',
-            # '🦗': '🐜',
-            # '🐜': '🧺'
         }
+
         # remember to reset any values when create_board is called, as there is only one Game.Game() object
         self.random = random
-        self.color_map = None
         self.has_lost = False
-        if not seed or seed == "":
+
+        # random seed if none is given
+        if seed == "":
             seed = random.random()
-        self.n = n
-        self.__board = [[0] * self.n for _ in range(self.n)]
-        bombs = set()
-        # self.__board[0][0] = 9
         self.random.seed(seed)
+
+        self.__board = [[0] * self.n for _ in range(self.n)]
         self.color_map = self.generate_color_map(list())
+
+        bombs = set()
         tiles_to_change = list()
-        for i in range(self.n ** 2 // 15):
+
+        for _ in range(self.n ** 2 // BOMB_NUM_SCALE):
+            # Select the tile to be bombed
             rbomb = self.random.randint(0, self.n - 1)
             cbomb = self.random.randint(0, self.n - 1)
-            self.__board[rbomb][cbomb] = 9
+            self.__board[rbomb][cbomb] = BOMB_VAL
             bombs.add((rbomb, cbomb))
+
+            # Mark surrounding tiles to be changed if inside board range
             for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
                         (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
                 if self.n > tup[0] >= 0 <= tup[1] < self.n:
                     tiles_to_change.append(tup)
-                pass
+
+            # Mark a tile with how many bombs are near it
             for tup in tiles_to_change:
-                if self.__board[tup[0]][tup[1]] == 0:
+                # Only change the tile if it's not already a bomb
+                if self.__board[tup[0]][tup[1]] != BOMB_VAL:
                     chk_set = {(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
                                (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)}
                     self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
@@ -67,6 +65,9 @@ class Game:
     @property
     def board(self):
         return self.__board
+
+    def create_board(self, size: int, seed) -> list[list[int]]:
+        pass
 
     def process_click(self, data: dict[str, str]) -> dict[str, ...]:
         ret = {}
@@ -96,14 +97,13 @@ class Game:
                             # print(ret)
                             if self.n > nxt[0] >= 0 <= nxt[1] < self.n and f"{nxt[0]}_{nxt[1]}" not in ret:
                                 to_check.append((nxt[0], nxt[1]))
-                pass
-            elif self.__board[rkey[0]][rkey[1]] != 9:
+            elif self.__board[rkey[0]][rkey[1]] != BOMB_VAL:
                 ret[key] = (str(self.__board[rkey[0]][rkey[1]]), "test1")
                 self.color_map[rkey] = "test1"
             else:
                 for i in range(self.n):
                     for j in range(self.n):
-                        if self.__board[i][j] == 9:
+                        if self.__board[i][j] == BOMB_VAL:
                             ret[f"{i}_{j}"] = ("💥", "test3")
 
         return ret
@@ -113,7 +113,7 @@ class Game:
 
         return False
 
-    def generate_color_map(self, answer: list[tuple[int, int]]) -> dict[int, str]:
+    def generate_color_map(self, answer: list[tuple[int, int]]) -> dict[tuple[int, int], str]:
         ret = {}
         for r, c in answer:
             ret[(r, c)] = "test1"
