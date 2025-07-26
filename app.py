@@ -8,14 +8,14 @@ fpath = os.path.join(os.path.dirname(__file__), 'helpers')
 sys.path.append(fpath)
 from helpers import Game
 
-my_game = Game.Game()
+my_game = Game.Game(8, "")
 app = Flask(__name__, static_url_path='', static_folder='static')
 
 # http://127.0.0.1:5000
 @app.route('/')
 def login():
     # index.html is dynamically generated i.e. the footer component is added
-    return render_template('index.html', title=my_game.title) 
+    return render_template('index.html', title=my_game.title)
 
 # http://127.0.0.1:5000/board                                                      
 @app.route('/board')
@@ -38,8 +38,8 @@ def game():
     board_seed = request.args.get('board_seed')
     if not board_seed:
         board_seed = str(random.randint(1,10000))
-    my_game = Game.Game()
-    my_game.create_board(size, board_seed)
+    global my_game
+    my_game= Game.Game(size, board_seed)
 
     template_info={#useful to group template info into one dictionary
         "username": username,
@@ -51,14 +51,13 @@ def game():
     }
     return render_template('game.html', info=template_info)
 
-# http://127.0.0.1:5000/solve/<id>
-@app.route('/solve/<id>', methods=['POST'])
-def process_results(id):
-    # data = request.json
-    # # print("Received JSON:", data)
-    # result = my_game.process_click(data)
-    # return result
-    return {"result": ""}
+# http://127.0.0.1:5000/submit
+@app.route('/submit', methods=['POST'])
+def process_results():
+    data = request.json
+    # print("Received JSON:", data)
+    result = my_game.submit(data)
+    return result
 
 @app.route('/click', methods=['POST'])
 def do_click():

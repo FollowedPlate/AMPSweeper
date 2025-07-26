@@ -20,6 +20,7 @@
 
 <script>
     cells = document.getElementsByTagName("td");
+    let has_lost = false;
     for (let cell of cells) {
         cell.addEventListener('mouseup', click_stuff)
         cell.addEventListener('contextmenu', cancel_context)
@@ -39,7 +40,7 @@
 
         if (event.button === 0) {
             data[event.target.id] = "clicked";
-        } else if (event.button === 2) {
+        } else if (event.button === 2 && !has_lost) {
             event.target.innerText = symbols[current]
         }
 
@@ -63,13 +64,48 @@
                     let key = `${i}_${j}`
                     if (key in response_data) {
                         let cdata = response_data[key]
+
                         document.getElementById(key).innerText = cdata[0];
                         document.getElementById(key).classList.replace(document.getElementById(key).classList.item(0), cdata[1])
+                        if (cdata[0] === "💥") {
+                            document.getElementById("feedback").innerText = "You have lost, refresh the page to play again"
+                            has_lost = true;
+                        }
                     }
                 }
             }
         } else {
             console.error('Server error:', response.status);
+        }
+        let is_done = true;
+        for (let cell of cells) {
+            if (cell.innerText === " ") {
+                is_done = false;
+            }
+        }
+        if (is_done) {
+            let data2 = {}
+
+            for (let cell of cells) {
+                data2[cell.id] = cell.innerText;
+            }
+
+            const options2 = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data2)
+            };
+
+            let response2 = await fetch("http://127.0.0.1:5000/submit", options2)
+            if (response2.ok) { // Check if the response status is in the 200-299 range
+                const response_data2 = await response2.json();2
+                console.log("Response from server:", response_data2);
+                document.getElementById("feedback").innerText = response_data2.result
+            } else {
+                console.error('Server error:', response2.status);
+            }
         }
     }
 
