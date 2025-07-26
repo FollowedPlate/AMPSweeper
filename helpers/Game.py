@@ -4,25 +4,25 @@ from helpers import Queens
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, n: int, seed):
         self.n = 8
         self.__board = [[0] * self.n for _ in range(self.n)]
         self.title = "AMPSweeper"
         self.symbols = {
             ' ': '🚩',
             '🚩': ' ',
-            '0':'0',
-            '1':'1',
-            '2':'2',
-            '3':'3',
-            '4':'4',
-            '5':'5',
-            '6':'6',
-            '7':'7',
-            '8':'8',
-            '9':'9',
-            '💥':'💥',
-            ' ':' '
+            '0': '0',
+            '1': '1',
+            '2': '2',
+            '3': '3',
+            '4': '4',
+            '5': '5',
+            '6': '6',
+            '7': '7',
+            '8': '8',
+            '9': '9',
+            '💥': '💥',
+            ' ': ' '
             # 'Ｏ':'Ｘ',
             # 'Ｘ':'♛',
             # '♛':'Ｏ'
@@ -36,26 +36,76 @@ class Game:
         # remember to reset any values when create_board is called, as there is only one Game.Game() object
         self.random = random
         self.color_map = None
-        pass
+        self.has_lost = False
+        if not seed or seed == "":
+            seed = random.random()
+        self.n = n
+        self.__board = [[0] * self.n for _ in range(self.n)]
+        bombs = set()
+        # self.__board[0][0] = 9
+        self.random.seed(seed)
+        self.color_map = self.generate_color_map(list())
+        tiles_to_change = list()
+        for i in range(self.n ** 2 // 15):
+            rbomb = self.random.randint(0, self.n - 1)
+            cbomb = self.random.randint(0, self.n - 1)
+            self.__board[rbomb][cbomb] = 9
+            bombs.add((rbomb, cbomb))
+            for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
+                        (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
+                if self.n > tup[0] >= 0 <= tup[1] < self.n:
+                    tiles_to_change.append(tup)
+                pass
+            for tup in tiles_to_change:
+                if self.__board[tup[0]][tup[1]] == 0:
+                    chk_set = {(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
+                               (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)}
+                    self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
+
+        print(self.__board)
 
     @property
     def board(self):
         return self.__board
 
-    def process_click(self, data:dict[str, str]) -> dict[str, ...]:
+    def process_click(self, data: dict[str, str]) -> dict[str, ...]:
         ret = {}
         # ret["0_0"] = ("9", "test1")
         # ret["3_3"] = ("2", "test1")
         print(data)
+        if self.has_lost:
+            return ret
         for key in data:
             rkey = (int(key[0]), int(key[2]))
-            if self.__board[rkey[0]][rkey[1]] != 9:
-                ret[key] = (" ", "test1")
+            if self.__board[rkey[0]][rkey[1]] == 0:
+                to_check = list()
+                to_check.append(rkey)
+                while len(to_check) > 0:
+                    key2 = to_check.pop()
+                    tlret = self.__board[key2[0]][key2[1]]
+                    if tlret == 0:
+                        tlret = " "
+                    else:
+                        tlret = str(tlret)
+                    ret[f"{key2[0]}_{key2[1]}"] = (tlret, "test1")
+                    self.color_map[rkey] = "test1"
+                    if self.__board[key2[0]][key2[1]] == 0:
+                        for nxt in [(key2[0] - 1, key2[1]), (key2[0] + 1, key2[1]), (key2[0], key2[1] - 1),
+                                    (key2[0], key2[1] + 1)]:
+                            # print(f"{nxt} one: {self.n > nxt[0] >= 0} two: {0 <= nxt[1] < self.n} three: {self.__board[nxt[0]][nxt[1]] == 0} four: {f"{nxt[0]}_{nxt[1]}" not in ret}")
+                            # print(ret)
+                            if self.n > nxt[0] >= 0 <= nxt[1] < self.n and f"{nxt[0]}_{nxt[1]}" not in ret:
+                                to_check.append((nxt[0], nxt[1]))
+                pass
+            elif self.__board[rkey[0]][rkey[1]] != 9:
+                ret[key] = (str(self.__board[rkey[0]][rkey[1]]), "test1")
                 self.color_map[rkey] = "test1"
             else:
                 for i in range(self.n):
                     for j in range(self.n):
-                        ret[f"{i}_{j}"] = ("💥", "test3")
+                        if self.__board[i][j] == 9:
+                            ret[f"{i}_{j}"] = ("💥", "test3")
+
         return ret
 
     def is_solved(self, data):
@@ -73,16 +123,6 @@ class Game:
                     ret[(r, c)] = ret.get((r, c), "test")
         return ret
 
-    def create_board(self, n: int, seed):
-        if not seed or seed == "":
-            seed = random.random()
-        self.n = n
-        self.__board = [[0] * self.n for _ in range(self.n)]
-        self.__board[0][0] = 9
-        self.random.seed(seed)
-        self.color_map = self.generate_color_map(list())
-
-
     def select_color(self, r, c):
         return self.color_map[(r, c)]
 
@@ -98,7 +138,6 @@ class Game:
             board_str += "</tr>"
         board_str += "</table>"
         return board_str
-
 
     def __str__(self):
         '''Human-formatted board'''

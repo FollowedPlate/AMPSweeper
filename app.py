@@ -9,7 +9,6 @@ sys.path.append(fpath)
 from helpers import Game
 
 my_game = Game.Game()
-
 app = Flask(__name__, static_url_path='', static_folder='static')
 
 # http://127.0.0.1:5000
@@ -39,6 +38,7 @@ def game():
     board_seed = request.args.get('board_seed')
     if not board_seed:
         board_seed = str(random.randint(1,10000))
+    my_game = Game.Game()
     my_game.create_board(size, board_seed)
 
     template_info={#useful to group template info into one dictionary
