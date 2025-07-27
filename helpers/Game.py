@@ -48,6 +48,12 @@ class Game:
     def board(self):
         return self.__board
 
+    # Main ideas for modifications:
+    # Difficulty:
+    #   - Run a second round of mine placement after the initial one
+    #       - Easy has a 0.75 * (Num of mine around square / 8) + 0.25 * (Num of mines in up/down/left/right) chance of generating an extra mine per square to encourage mine clumping and easy patterns
+    #       - Medium has a 0.1 chance of generating an extra mine per square
+    #       - Hard has a 0.1 + (Num of 1's and 2's around square / 8) chance of generating an extra mine per square to encourage more deduction
     def create_board(self, difficulty: str):
         bomb_scale = BOMB_NUM_SCALE_EASY
         if difficulty == "medium":
@@ -58,6 +64,7 @@ class Game:
         bombs = set()
         tiles_to_change = list()
 
+        # Original mine placement
         for _ in range(self.n ** 2 // bomb_scale):
             # Select the tile to be bombed
             rbomb = self.random.randint(0, self.n - 1)
@@ -71,11 +78,55 @@ class Game:
                 if self.n > tup[0] >= 0 <= tup[1] < self.n:
                     tiles_to_change.append(tup)
 
+        # Mark tiles based on how many mines are nearby
         for tup in tiles_to_change:
-            if self.__board[tup[0]][tup[1]] == 0:
+            if self.__board[tup[0]][tup[1]] != BOMB_VAL:
                 chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
                            (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
                 self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
+
+        # Difficulty based mines
+        for _ in range(self.n ** 2 // bomb_scale):
+            rbomb = self.random.randint(0, self.n - 1)
+            cbomb = self.random.randint(0, self.n - 1)
+
+            bomb_chance = 0.1
+            if difficulty == "easy" or difficulty == "hard":
+                surrounding_vals = []
+                for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
+                        (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
+                    if self.n > tup[0] >= 0 <= tup[1] < self.n:
+                        surrounding_vals.append(self.__board[tup[0]][tup[1]])
+                    else:
+                        surrounding_vals.append(-2)
+
+                if difficulty == "easy":
+                    bomb_chance = 0.75 * (surrounding_vals.count(-1) / 8) + 0.25 * ((
+                        1 if surrounding_vals[1] == BOMB_VAL else 0 +
+                        1 if surrounding_vals[3] == BOMB_VAL else 0 +
+                        1 if surrounding_vals[5] == BOMB_VAL else 0 +
+                        1 if surrounding_vals[7] == BOMB_VAL else 0
+                    ) / 4)
+                else:
+                    bomb_chance += (surrounding_vals.count(1) + surrounding_vals.count(2)) / 8
+
+            if self.random.random() > bomb_chance:
+                continue
+
+            self.__board[rbomb][cbomb] = BOMB_VAL
+            bombs.add((rbomb, cbomb))
+
+            for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
+                        (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
+                if self.n > tup[0] >= 0 <= tup[1] < self.n:
+                    tiles_to_change.append(tup)
+
+        for tup in tiles_to_change:
+            if self.__board[tup[0]][tup[1]] != BOMB_VAL:
+                chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
+                           (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
+                self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
+
         self.safest_tiles = list()
         for row in range(self.n):
             for col in range(self.n):
