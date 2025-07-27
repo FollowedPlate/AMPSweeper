@@ -59,12 +59,14 @@ class Game:
     # Main ideas for modifications:
     # Difficulty:
     #   - Run a second round of mine placement after the initial one
-    #       - Easy has a 0.2 + 0.6 * (Num of mine around square / 8) + 0.2 * (Num of mines in up/down/left/right) chance of generating an extra mine per square to encourage mine clumping and easy patterns
-    #       - Medium has a 0.3 chance of generating an extra mine per square
-    #       - Hard has a 0.1 + 0.9 * (Num of 1's and 2's around square / 8) chance of generating an extra mine per square to encourage more deduction
+    #       - Easy has a 0.2 + 0.6 * (Num of mine around square / 8) + 0.2 * (Num of mines in up/down/left/right) chance of generating an extra mine per square to encourage mine clumping and easy patterns such as L shapes or lines
+    #       - Medium has a 0.3 chance of generating an extra mine per square - Uniform standard
+    #       - Hard has a 0.9 * (Num of 1's and 2's around square / 8) chance of generating an extra mine per square to encourage more deduction required to tell where a bomb might be
     # Good first step for difficulty, but still need a way to verify the game is actually fun (e.g could have much too easy easy boards)
     #   - Check how many empty groups there are (3x3 block of zeros)
     def create_board(self, difficulty: str):
+        # Adjust modifiers based on difficulty selected
+        # These change how many bombs appear on the board, and the amount of empty space allowed
         bomb_scale = BOMB_SCALE_EASY
         empty_groups_threshold = EMPTY_SCALE_EASY_MIN * self.n
         empty_groups_max = EMPTY_SCALE_EASY_MAX * self.n
@@ -77,8 +79,10 @@ class Game:
             empty_groups_threshold = EMPTY_SCALE_HARD_MIN * self.n
             empty_groups_max = EMPTY_SCALE_HARD_MAX * self.n
 
+        # -1 such that hard mode can have a threshold of 0 empty groups
         empty_groups = -1
 
+        # Iterate through while the number of empty groups is not within the difficulty bounds
         while empty_groups < empty_groups_threshold or empty_groups > empty_groups_max:
             # Reset board
             bombs = set()
@@ -112,6 +116,8 @@ class Game:
                 rbomb = self.random.randint(0, self.n - 1)
                 cbomb = self.random.randint(0, self.n - 1)
 
+                # Generate chances for bombs to be placed on this difficulty pass depending on, well, the difficulty
+                # Further justification in the comment above the function
                 bomb_chance = 0.3
                 if difficulty == "easy" or difficulty == "hard":
                     surrounding_vals = []
@@ -132,6 +138,7 @@ class Game:
                     else:
                         bomb_chance = 0.9 * (surrounding_vals.count(1) + surrounding_vals.count(2)) / 8
 
+                # Check if the random check is passed
                 if self.random.random() > bomb_chance:
                     continue
 
@@ -150,12 +157,14 @@ class Game:
                                    (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
                         self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
 
+            # Change tile values to reflect the number of bombs in their radius
             for tup in tiles_to_change:
                 if self.__board[tup[0]][tup[1]] != BOMB_VAL:
                     chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
                                (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
                     self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
 
+            # Generate the number of empty groups in the board
             empty = True
             empty_groups = 0
             for row in range(self.n):
@@ -172,6 +181,7 @@ class Game:
                     if empty:
                         empty_groups += 1
 
+        # Create a list of tiles that are safe to click on the first turn
         self.safest_tiles = list()
         for row in range(self.n):
             for col in range(self.n):
@@ -246,15 +256,15 @@ class Game:
                     is_valid_solution = False
         ret = ""
         if is_valid_solution:
-            ret = "SOLUTION WORKS YIPPEE"
+            ret = "You've solved the puzzle!"
         else:
             ret = "not done :("
         return {"result": ret}
 
-    def is_solved(self, data):
-        # data = {"0_0":"🧺","0_1":"🧺","0_2":"🧺","0_3":"🧺","0_4":"🧺","1_0":"🧺","1_1":"🧺","1_2":"🧺","1_3":"🧺","1_4":"🧺","2_0":"🧺","2_1":"❌","2_2":"🧺","2_3":"🧺","2_4":"🧺","3_0":"🧺","3_1":"🧺","3_2":"🧺","3_3":"🧺","3_4":"🧺","4_0":"🧺","4_1":"🧺","4_2":"🧺","4_3":"🧺","4_4":"🧺"}
-
-        return False
+#    def is_solved(self, data):
+#        # data = {"0_0":"🧺","0_1":"🧺","0_2":"🧺","0_3":"🧺","0_4":"🧺","1_0":"🧺","1_1":"🧺","1_2":"🧺","1_3":"🧺","1_4":"🧺","2_0":"🧺","2_1":"❌","2_2":"🧺","2_3":"🧺","2_4":"🧺","3_0":"🧺","3_1":"🧺","3_2":"🧺","3_3":"🧺","3_4":"🧺","4_0":"🧺","4_1":"🧺","4_2":"🧺","4_3":"🧺","4_4":"🧺"}
+#
+#        return False
 
     def generate_color_map(self, answer: list[tuple[int, int]]) -> dict[tuple[int, int], str]:
         ret = {}
