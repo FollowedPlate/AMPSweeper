@@ -1,8 +1,16 @@
 import random
 
-BOMB_NUM_SCALE_EASY = 25
-BOMB_NUM_SCALE_MEDIUM = 15
-BOMB_NUM_SCALE_HARD = 5
+BOMB_SCALE_EASY = 15
+BOMB_SCALE_MEDIUM = 10
+BOMB_SCALE_HARD = 5
+
+EMPTY_SCALE_EASY_MIN = 0.2
+EMPTY_SCALE_MEDIUM_MIN = 0.1
+EMPTY_SCALE_HARD_MIN = 0
+
+EMPTY_SCALE_EASY_MAX = 0.6
+EMPTY_SCALE_MEDIUM_MAX = 0.4
+EMPTY_SCALE_HARD_MAX = 0.2
 
 BOMB_VAL = -1
 
@@ -51,81 +59,118 @@ class Game:
     # Main ideas for modifications:
     # Difficulty:
     #   - Run a second round of mine placement after the initial one
-    #       - Easy has a 0.75 * (Num of mine around square / 8) + 0.25 * (Num of mines in up/down/left/right) chance of generating an extra mine per square to encourage mine clumping and easy patterns
-    #       - Medium has a 0.25 chance of generating an extra mine per square
+    #       - Easy has a 0.2 + 0.6 * (Num of mine around square / 8) + 0.2 * (Num of mines in up/down/left/right) chance of generating an extra mine per square to encourage mine clumping and easy patterns
+    #       - Medium has a 0.3 chance of generating an extra mine per square
     #       - Hard has a 0.1 + 0.9 * (Num of 1's and 2's around square / 8) chance of generating an extra mine per square to encourage more deduction
+    # Good first step for difficulty, but still need a way to verify the game is actually fun (e.g could have much too easy easy boards)
+    #   - Check how many empty groups there are (3x3 block of zeros)
     def create_board(self, difficulty: str):
-        bomb_scale = BOMB_NUM_SCALE_EASY
+        bomb_scale = BOMB_SCALE_EASY
+        empty_groups_threshold = EMPTY_SCALE_EASY_MIN * self.n
+        empty_groups_max = EMPTY_SCALE_EASY_MAX * self.n
         if difficulty == "medium":
-            bomb_scale = BOMB_NUM_SCALE_MEDIUM
+            bomb_scale = BOMB_SCALE_MEDIUM
+            empty_groups_threshold = EMPTY_SCALE_MEDIUM_MIN * self.n
+            empty_groups_max = EMPTY_SCALE_MEDIUM_MAX * self.n
         elif difficulty == "hard":
-            bomb_scale = BOMB_NUM_SCALE_HARD
+            bomb_scale = BOMB_SCALE_HARD
+            empty_groups_threshold = EMPTY_SCALE_HARD_MIN * self.n
+            empty_groups_max = EMPTY_SCALE_HARD_MAX * self.n
 
-        bombs = set()
-        tiles_to_change = list()
+        empty_groups = -1
 
-        # Original mine placement
-        for _ in range(self.n ** 2 // bomb_scale):
-            # Select the tile to be bombed
-            rbomb = self.random.randint(0, self.n - 1)
-            cbomb = self.random.randint(0, self.n - 1)
-            self.__board[rbomb][cbomb] = BOMB_VAL
-            bombs.add((rbomb, cbomb))
+        while empty_groups < empty_groups_threshold or empty_groups > empty_groups_max:
+            # Reset board
+            bombs = set()
+            tiles_to_change = list()
+            self.__board = [[0] * self.n for _ in range(self.n)]
 
-            # Mark surrounding tiles to be changed if inside board range
-            for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
-                        (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
-                if self.n > tup[0] >= 0 <= tup[1] < self.n:
-                    tiles_to_change.append(tup)
+            # Original mine placement
+            for _ in range(self.n ** 2 // bomb_scale):
+                # Select the tile to be bombed
+                rbomb = self.random.randint(0, self.n - 1)
+                cbomb = self.random.randint(0, self.n - 1)
+                self.__board[rbomb][cbomb] = BOMB_VAL
+                bombs.add((rbomb, cbomb))
 
-        # Mark tiles based on how many mines are nearby
-        for tup in tiles_to_change:
-            if self.__board[tup[0]][tup[1]] != BOMB_VAL:
-                chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
-                           (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
-                self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
-
-        # Difficulty based mines
-        for _ in range(self.n ** 2 // bomb_scale):
-            rbomb = self.random.randint(0, self.n - 1)
-            cbomb = self.random.randint(0, self.n - 1)
-
-            bomb_chance = 0.25
-            if difficulty == "easy" or difficulty == "hard":
-                surrounding_vals = []
+                # Mark surrounding tiles to be changed if inside board range
                 for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
-                        (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
+                            (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
                     if self.n > tup[0] >= 0 <= tup[1] < self.n:
-                        surrounding_vals.append(self.__board[tup[0]][tup[1]])
+                        tiles_to_change.append(tup)
+
+           # Need to do this up here as well so hard mode mines can be generated correctly
+            if difficulty == "hard":
+                for tup in tiles_to_change:
+                    if self.__board[tup[0]][tup[1]] != BOMB_VAL:
+                        chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
+                                   (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
+                        self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
+
+            # Difficulty based mines
+            for _ in range(self.n ** 2 // bomb_scale):
+                rbomb = self.random.randint(0, self.n - 1)
+                cbomb = self.random.randint(0, self.n - 1)
+
+                bomb_chance = 0.3
+                if difficulty == "easy" or difficulty == "hard":
+                    surrounding_vals = []
+                    for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
+                            (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
+                        if self.n > tup[0] >= 0 <= tup[1] < self.n:
+                            surrounding_vals.append(self.__board[tup[0]][tup[1]])
+                        else:
+                            surrounding_vals.append(-2)
+
+                    if difficulty == "easy":
+                        bomb_chance = 0.2 + 0.6 * (surrounding_vals.count(-1) / 8) + 0.2 * ((
+                            1 if surrounding_vals[1] == BOMB_VAL else 0 +
+                            1 if surrounding_vals[3] == BOMB_VAL else 0 +
+                            1 if surrounding_vals[5] == BOMB_VAL else 0 +
+                            1 if surrounding_vals[7] == BOMB_VAL else 0
+                        ) / 4)
                     else:
-                        surrounding_vals.append(-2)
+                        bomb_chance = 0.9 * (surrounding_vals.count(1) + surrounding_vals.count(2)) / 8
 
-                if difficulty == "easy":
-                    bomb_chance = 0.75 * (surrounding_vals.count(-1) / 8) + 0.25 * ((
-                        1 if surrounding_vals[1] == BOMB_VAL else 0 +
-                        1 if surrounding_vals[3] == BOMB_VAL else 0 +
-                        1 if surrounding_vals[5] == BOMB_VAL else 0 +
-                        1 if surrounding_vals[7] == BOMB_VAL else 0
-                    ) / 4)
-                else:
-                    bomb_chance = 0.1 + 0.9 * (surrounding_vals.count(1) + surrounding_vals.count(2)) / 8
+                if self.random.random() > bomb_chance:
+                    continue
 
-            if self.random.random() > bomb_chance:
-                continue
+                self.__board[rbomb][cbomb] = BOMB_VAL
+                bombs.add((rbomb, cbomb))
 
-            self.__board[rbomb][cbomb] = BOMB_VAL
-            bombs.add((rbomb, cbomb))
+                for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
+                            (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
+                    if self.n > tup[0] >= 0 <= tup[1] < self.n:
+                        tiles_to_change.append(tup)
 
-            for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
-                        (rbomb + 1, cbomb), (rbomb + 1, cbomb - 1), (rbomb, cbomb - 1), (rbomb - 1, cbomb - 1)]:
-                if self.n > tup[0] >= 0 <= tup[1] < self.n:
-                    tiles_to_change.append(tup)
+                # Mark tiles based on how many mines are nearby
+                for tup in tiles_to_change:
+                    if self.__board[tup[0]][tup[1]] != BOMB_VAL:
+                        chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
+                                   (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
+                        self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
 
-        for tup in tiles_to_change:
-            if self.__board[tup[0]][tup[1]] != BOMB_VAL:
-                chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
-                           (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
-                self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
+            for tup in tiles_to_change:
+                if self.__board[tup[0]][tup[1]] != BOMB_VAL:
+                    chk_set = {(tup[0] - 1, tup[1]), (tup[0] - 1, tup[1] + 1), (tup[0], tup[1] + 1), (tup[0] + 1, tup[1] + 1),
+                               (tup[0] + 1, tup[1]), (tup[0] + 1, tup[1] - 1), (tup[0], tup[1] - 1), (tup[0] - 1, tup[1] - 1)}
+                    self.__board[tup[0]][tup[1]] = len(chk_set.intersection(bombs))
+
+            empty = True
+            empty_groups = 0
+            for row in range(self.n):
+                for col in range(self.n):
+                    empty = True
+
+                    # Don't need to check origin square - if surrounding are all zero's it cannot possibly be a bomb
+                    for tup in [(row - 1, col), (row - 1, col + 1), (row, col + 1), (row + 1, col + 1),
+                                (row + 1, col), (row + 1, col - 1), (row, col - 1), (row - 1, col - 1)]:
+                        if not self.n > tup[0] >= 0 <= tup[1] < self.n or self.__board[tup[0]][tup[1]] != 0:
+                            empty = False
+                            break
+
+                    if empty:
+                        empty_groups += 1
 
         self.safest_tiles = list()
         for row in range(self.n):
@@ -193,11 +238,11 @@ class Game:
                 if tdata == "\u2003":
                     tdata = 0
                 elif tdata == "🚩":
-                    tdata = 9
+                    tdata = BOMB_VAL
                 else:
                     tdata = int(tdata)
                 if self.__board[r][c] != tdata:
-                    print(f"differece at {r},{c}")
+                    print(f"difference at {r},{c}. expected " + str(tdata))
                     is_valid_solution = False
         ret = ""
         if is_valid_solution:
