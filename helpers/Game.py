@@ -52,8 +52,8 @@ class Game:
     # Difficulty:
     #   - Run a second round of mine placement after the initial one
     #       - Easy has a 0.75 * (Num of mine around square / 8) + 0.25 * (Num of mines in up/down/left/right) chance of generating an extra mine per square to encourage mine clumping and easy patterns
-    #       - Medium has a 0.1 chance of generating an extra mine per square
-    #       - Hard has a 0.1 + (Num of 1's and 2's around square / 8) chance of generating an extra mine per square to encourage more deduction
+    #       - Medium has a 0.25 chance of generating an extra mine per square
+    #       - Hard has a 0.1 + 0.9 * (Num of 1's and 2's around square / 8) chance of generating an extra mine per square to encourage more deduction
     def create_board(self, difficulty: str):
         bomb_scale = BOMB_NUM_SCALE_EASY
         if difficulty == "medium":
@@ -90,7 +90,7 @@ class Game:
             rbomb = self.random.randint(0, self.n - 1)
             cbomb = self.random.randint(0, self.n - 1)
 
-            bomb_chance = 0.1
+            bomb_chance = 0.25
             if difficulty == "easy" or difficulty == "hard":
                 surrounding_vals = []
                 for tup in [(rbomb - 1, cbomb), (rbomb - 1, cbomb + 1), (rbomb, cbomb + 1), (rbomb + 1, cbomb + 1),
@@ -108,7 +108,7 @@ class Game:
                         1 if surrounding_vals[7] == BOMB_VAL else 0
                     ) / 4)
                 else:
-                    bomb_chance += (surrounding_vals.count(1) + surrounding_vals.count(2)) / 8
+                    bomb_chance = 0.1 + 0.9 * (surrounding_vals.count(1) + surrounding_vals.count(2)) / 8
 
             if self.random.random() > bomb_chance:
                 continue
