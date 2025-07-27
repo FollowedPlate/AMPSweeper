@@ -193,7 +193,7 @@ class Game:
                 if tdata == "\u2003":
                     tdata = 0
                 elif tdata == "🚩":
-                    tdata = 9
+                    tdata = BOMB_VAL
                 else:
                     tdata = int(tdata)
                 if self.__board[r][c] != tdata:
