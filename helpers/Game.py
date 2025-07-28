@@ -188,8 +188,8 @@ class Game:
                 if self.__board[row][col] == 0:
                     self.safest_tiles.append((row, col))
 
-    def give_hint():
-        pass
+    # def give_hint():
+    #     pass
 
     def process_click(self, data: dict[str, str]) -> dict[str, ...]:
         ret = {}
