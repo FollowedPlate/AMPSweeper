@@ -22,9 +22,10 @@ direction TB
 	    +random random
 	    +int[][] board
 	    +Dict color_map
+
+        +give_hint()
 	    +bool has_lost
 	    +create_board()
-	    +mate()
 	    +process_click()
 	    +board_to_string()
 	    +submit()
